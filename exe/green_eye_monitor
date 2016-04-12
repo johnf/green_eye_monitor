@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+
+$LOAD_PATH.unshift(File.dirname(__FILE__) + '/lib')
+
+require 'green_eye_monitor/client'
+require 'awesome_print'
+
+client = GreenEyeMonitor::Client.new
+
+client.reset
+client.disable_realtime
+client.disable_keepalive
+client.set_packet_format(:list)
+# client.shell
+# client.set_packet_send_interval(3)
+# client.set_packet_chunk_size(65_000)
+# client.set_com1_baud_rate(115_200)
+puts client.hertz
+puts client.temperature(1)
+puts client.recent_values
+puts client.send_one_packet
