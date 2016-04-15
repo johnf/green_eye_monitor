@@ -45,12 +45,11 @@ module GreenEyeMonitor
       write('SYSKAI0')
 
       # Wait for any last writes
-      sleep(0.5)
+      sleep(0.1)
 
       # Flush everything
       @serial.flush_output
       @serial.flush_input
-      sleep(0.5)
     end
 
     def shell
