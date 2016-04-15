@@ -21,11 +21,15 @@ module GreenEyeMonitor
       :cosm           => 12,
       :seg            => 13,
     }
+    PACKET_FORMATS_REV = PACKET_FORMATS.invert
 
     BAUD_RATES = {
       19_200  => 0,
       115_200 => 1,
     }
+
+    LONG_CRLF = /\r\n\r\n$/
+    CRLF = /\r\n$/
 
     def initialize(options = {})
       serial_port = options[:serial_port] || '/dev/ttyUSB0'
@@ -34,9 +38,19 @@ module GreenEyeMonitor
 
       @serial = SerialPort.new(serial_port, 'baud' => baud)
 
+      @serial.read_timeout = 100
+
+      # We disable all the push so we can operate in pull mode
+      write('SYSOFF')
+      write('SYSKAI0')
+
+      # Wait for any last writes
+      sleep(0.5)
+
+      # Flush everything
       @serial.flush_output
       @serial.flush_input
-      @serial.read_timeout = 100
+      sleep(0.5)
     end
 
     def shell
@@ -47,35 +61,25 @@ module GreenEyeMonitor
         command = STDIN.readline
         command.strip!
         command = old_command if command.empty?
-        @serial.syswrite("^^^#{command}")
+        write("#{command}")
         puts read
         old_command = command
       end
     end
 
-    def reset
-      @serial.syswrite('^^^RQSSRN')
-      @serial.syswrite('^^^RQSSRN')
-      @serial.syswrite('^^^RQSSRN')
-      read
-      read
-      read
-      read
-    end
-
     def disable_realtime
-      @serial.syswrite('^^^SYSOFF')
-      read('OFF')
+      write('SYSOFF')
+      read(:expect => /^OFF$/)
     end
 
     def enable_realtime
-      @serial.syswrite('^^^SYS_ON')
-      read('_ON')
+      write('SYS_ON')
+      read(:expect => /^_ON$/)
     end
 
     def disable_keepalive
-      @serial.syswrite('^^^SYSKAI0')
-      read('OK')
+      write('SYSKAI0')
+      read(:expect => /OK$/)
     end
 
     def enable_keepalive(seconds)
@@ -85,119 +89,156 @@ module GreenEyeMonitor
       x = 7 if x > 7
       x = 1 if x == 0
 
-      @serial.syswrite("^^^SYSKAI#{x}")
-      read('OK')
+      write("SYSKAI#{x}")
+      read(:expect => /^OK$/)
     end
 
-    # rubocop:disable Style/AccessorMethodName
-    def set_packet_format(packet_format)
-      int_format = PACKET_FORMATS[packet_format] || fail(Errors::Argument, 'Unknown packet format')
+    def packet_format
+      write('RQSRTF')
+      format = read(:expect => /^\d\d\r\n$/)
 
-      @serial.syswrite(format('^^^SYSPKT%02d', int_format))
-      read('PKT')
+      PACKET_FORMATS_REV[format.to_i]
     end
 
-    def set_secondary_packet_format(packet_format)
+    def packet_format=(packet_format)
       int_format = PACKET_FORMATS[packet_format] || fail(Errors::Argument, 'Unknown packet format')
 
-      @serial.syswrite(format('^^^SYSPKF%02d', int_format))
-      read('PKT')
+      write(format('SYSPKT%02d', int_format))
+      read(:expect => /^PKT\r\n$/)
+    end
+
+    def secondary_packet_format=(packet_format)
+      int_format = PACKET_FORMATS[packet_format] || fail(Errors::Argument, 'Unknown packet format')
+
+      write(format('SYSPKF%02d', int_format))
+      read(:expect => 'PKT')
     end
 
     def disable_secondary_packet_format
-      @serial.syswrite('^^^SYSPKF00')
-      read('PKT')
+      write('SYSPKF00')
+      read(:expect => 'PKT')
     end
 
-    def set_packet_send_interval(seconds)
+    def packet_send_interval=(seconds)
       fail(Errors::Argument, 'Invalid interval: must be between 1 and 256') unless seconds > 0 && seconds <= 256
 
-      @serial.syswrite(format('^^^SYSIVL%03d', seconds))
-      read('IVL')
+      write(format('SYSIVL%03d', seconds))
+      read(:expect => 'IVL')
     end
 
-    def set_packet_chunk_size(size)
+    def packet_chunk_size=(size)
       fail(Errors::Argument, 'Invalid chunk size: must be between 80 and 65,000') unless size >= 80 && size <= 65_000
 
-      @serial.syswrite("^^^SYSPKS#{size}\n")
-      read('PKS')
+      write("SYSPKS#{size}\n")
+      read(:expect => 'PKS')
     end
 
-    def set_packet_chunk_interval(seconds)
+    def packet_chunk_interval=(seconds)
       fail(Errors::Argument, 'Invalid interval: must be between 16 and 65,000') unless seconds >= 16 && seconds <= 65_000
 
-      @serial.syswrite("^^^SYSPKI#{seconds}\n")
-      read('PKI')
+      write("SYSPKI#{seconds}\n")
+      read(:expect => 'PKI')
     end
 
-    def set_max_buffer_size(size)
+    def max_buffer_size=(size)
       fail(Errors::Argument, 'Invalid buffer size: must be between 10 and 1,700') unless size >= 10 && size <= 1_700
 
-      @serial.syswrite("^^^SYSBFF#{size}\n")
-      read('BFF')
+      write("SYSBFF#{size}\n")
+      read(:expect => 'BFF')
     end
 
-    def set_com1_baud_rate(rate)
+    def com1_baud_rate=(rate)
       int_rate = BAUD_RATES[rate] || fail(Errors::Argument, 'Unknown baud rate')
 
-      @serial.syswrite("^^^SYSBD1#{int_rate}")
-      read('OK')
+      write("SYSBD1#{int_rate}")
+      read(:expect => 'OK')
     end
 
-    def set_com2_baud_rate(rate)
+    def com2_baud_rate=(rate)
       fail(Errors::Argument, 'COM2 can only operate at 19,200') if rate != 19_200
 
-      @serial.syswrite('^^^SYSBD20')
-      read('OK')
+      write('SYSBD20')
+      read(:expect => 'OK')
     end
-    # rubocop:enable Style/AccessorMethodName
 
     def hertz
-      @serial.syswrite('^^^RQSHZ')
-      read
+      write('RQSHZ')
+      read(:expect => /^[56]0Hz\r\n\r\n$/)
     end
 
     def temperature(channel)
       fail(Errors::Argument, 'Invalid temperature channel') unless channel >= 1 && channel <= 8
 
-      @serial.syswrite("^^^APITP#{channel}")
-      read
+      write("APITP#{channel}")
+      read(:expect => /\d\d\.\d$/)
     end
 
     def enable_temperature_channel(channel)
       fail(Errors::Argument, 'Invalid temperature channel') unless channel >= 1 && channel <= 8
 
-      @serial.syswrite("^^^TMPEN#{channel}")
+      write("TMPEN#{channel}")
       read('MOO')
     end
 
     def recent_values
-      @serial.syswrite('^^^APIVAL')
-      read
+      write('APIVAL')
+      read(:expect => /VAL.*END\r\n$/)
     end
 
     def send_one_packet
-      @serial.syswrite('^^^APISPK')
-      read
+      pf = packet_format
+
+      write('APISPK')
+
+      case pf
+      when :list
+        read(:expect => /^.*<EOP>$/, :wait => true)
+      else
+        fail(Errors::NotImplemented, 'Unimplemented packet format')
+      end
     end
 
     private
 
-    def read(expect = nil)
+    def write(cmd)
+      puts "---> #{cmd}" if @debug
+      @serial.syswrite("^^^#{cmd}")
+    end
+
+    def read_expect(expect)
       data = ''
 
       loop do
         byte = @serial.getbyte
+        p "    R: #{byte ? byte.chr : byte}"
 
-        break unless byte
+        if byte.nil?
+          fail(Errors::TooShort, "Data too short #{data.inspect}")
+        end
 
         data << byte.chr
+
+        break if data =~ expect
       end
 
-      p data if @debug
-      data.strip!
+      data
+    end
 
-      fail(Errors::BadData, "Bad data: expected=#{expect} received=#{data}") if !expect.nil? && data != expect
+    def read(options = {})
+
+      if options[:wait]
+        data = @serial.getbyte while data.nil?
+        @serial.ungetbyte(data)
+      end
+
+      if options[:expect]
+        data = read_expect(options[:expect])
+      else
+        fail options.to_s
+      end
+
+      puts "<--- #{data.inspect}" if @debug
+      data.strip!
 
       data
     end
