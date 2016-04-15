@@ -9,11 +9,19 @@ Style/Documentation:
 Style/Lambda:
   Enabled: false
 
-Style/TrailingComma:
-  EnforcedStyleForMultiline: comma
+Style/TrailingCommaInLiteral:
+  Enabled: false
 
 Metrics/LineLength:
   Max: 120
+
+# TODO: Cleanup
+Metrics/ModuleLength:
+  Max: 200
+
+# TODO: Cleanup
+Metrics/ClassLength:
+  Max: 200
 
 Style/ModuleFunction:
   Enabled: false

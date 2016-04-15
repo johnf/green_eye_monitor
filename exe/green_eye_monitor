@@ -15,7 +15,7 @@ puts "Hertz: #{client.hertz}"
 puts "Temp: #{client.temperature(1)}"
 puts "Recent: #{client.recent_values}"
 
-puts "List Format:"
+puts 'List Format:'
 client.packet_format = :list
 puts client.send_one_packet
 
