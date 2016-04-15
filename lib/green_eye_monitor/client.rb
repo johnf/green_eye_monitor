@@ -32,7 +32,7 @@ module GreenEyeMonitor
       baud = options[:baud] || 115_200
       @debug = options[:debug] || false
 
-      @serial = SerialPort.new(serial_port, :baud => baud)
+      @serial = SerialPort.new(serial_port, 'baud' => baud)
 
       @serial.flush_output
       @serial.flush_input
@@ -54,9 +54,9 @@ module GreenEyeMonitor
     end
 
     def reset
-      @serial.syswrite('^^^SYSOFF')
-      @serial.syswrite('^^^SYSOFF')
-      @serial.syswrite('^^^SYSOFF')
+      @serial.syswrite('^^^RQSSRN')
+      @serial.syswrite('^^^RQSSRN')
+      @serial.syswrite('^^^RQSSRN')
       read
       read
       read
@@ -194,6 +194,7 @@ module GreenEyeMonitor
         data << byte.chr
       end
 
+      p data if @debug
       data.strip!
 
       fail(Errors::BadData, "Bad data: expected=#{expect} received=#{data}") if !expect.nil? && data != expect
