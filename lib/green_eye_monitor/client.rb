@@ -209,7 +209,7 @@ module GreenEyeMonitor
 
       loop do
         byte = @serial.getbyte
-        p "    R: #{byte ? byte.chr : byte}"
+        puts "DEBUG: byte=#{byte ? byte.chr : byte}" if @debug
 
         if byte.nil?
           fail(Errors::TooShort, "Data too short #{data.inspect}")

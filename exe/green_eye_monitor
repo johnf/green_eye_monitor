@@ -5,17 +5,18 @@ $LOAD_PATH.unshift(File.dirname(__FILE__) + '/lib')
 require 'green_eye_monitor/client'
 require 'awesome_print'
 
-client = GreenEyeMonitor::Client.new(:baud => 115_200, :debug => true)
+client = GreenEyeMonitor::Client.new(:baud => 115_200, :debug => false)
 
 # client.shell
 # client.packet_send_interval = 3
 # client.packet_chunk_size = 65_000
 # client.com1_baud_rate = 115_200
-puts client.hertz
-puts client.temperature(1)
-puts client.recent_values
-puts client.packet_format
+puts "Hertz: #{client.hertz}"
+puts "Temp: #{client.temperature(1)}"
+puts "Recent: #{client.recent_values}"
+
+puts "List Format:"
 client.packet_format = :list
-puts client.packet_format
 puts client.send_one_packet
+
 # client.shell
