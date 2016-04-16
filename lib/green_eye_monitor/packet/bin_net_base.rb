@@ -41,7 +41,7 @@ module GreenEyeMonitor
       def calc_checksum(checksum)
         calculated_checksum = (to_binary_s.bytes.inject(0, :+) - checksum) & 0xFF
 
-        # TODO why are we off by one?
+        # TODO: why are we off by one?
         checksum == calculated_checksum + 1
       end
 

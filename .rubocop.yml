@@ -29,5 +29,8 @@ Metrics/MethodLength:
 Style/ModuleFunction:
   Enabled: false
 
+Metrics/AbcSize:
+  Max: 20
+
 AlignHash:
   EnforcedHashRocketStyle: table
