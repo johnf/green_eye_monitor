@@ -35,8 +35,14 @@ module GreenEyeMonitor
       uint8 :footer_a, :asserted_value => 0xFF
       uint8 :footer_b, :asserted_value => 0xFE
 
-      # TODO: Why do we need to add 18???
-      uint8 :chksum, :assert => lambda { value == (to_binary_s.bytes.inject(0, :+) - value + 18) & 0xFF }
+      uint8 :checksum, :assert => lambda { calc_checksum(value) }
+
+      def calc_checksum(checksum)
+        # TODO: Why do we need to add 18???
+        calculated_checksum = (to_binary_s.bytes.inject(0, :+) - checksum + 18) & 0xFF
+
+        checksum == calculated_checksum
+      end
 
       def voltage
         raw_voltage / 10.0
