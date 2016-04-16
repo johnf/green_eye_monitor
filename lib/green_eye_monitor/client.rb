@@ -1,4 +1,5 @@
 require 'green_eye_monitor/errors'
+require 'green_eye_monitor/packet'
 
 require 'serialport'
 
@@ -10,7 +11,7 @@ module GreenEyeMonitor
       :ascii          => 2,
       :http           => 3,
       :bin48_net_time => 4,
-      :bin43_net      => 5,
+      :bin48_net      => 5,
       :old_seg        => 6,
       :bin48_abs      => 7,
       :bin32_net      => 8,
@@ -22,6 +23,8 @@ module GreenEyeMonitor
       :seg            => 13,
     }.freeze
     PACKET_FORMATS_REV = PACKET_FORMATS.invert
+
+    IMPLEMENTED_FORMATS = %i(list bin48_net_time bin48_net bin48_abs bin32_net bin32_abs).freeze
 
     BAUD_RATES = {
       19_200  => 0,
@@ -184,18 +187,34 @@ module GreenEyeMonitor
       read(:expect => /VAL.*END\r\n$/)
     end
 
+    # rubocop:disable Metrics/AbcSize,Metrics/CyclomaticComplexity,Metrics/MethodLength
     def send_one_packet
       pf = packet_format
+      raise(Errors::NotImplemented, "Unimplemented packet format: #{pf}") unless IMPLEMENTED_FORMATS.include?(pf)
 
       write('APISPK')
 
       case pf
       when :list
         read(:expect => /^.*<EOP>$/, :wait => true)
-      else
-        raise(Errors::NotImplemented, 'Unimplemented packet format')
+      when :bin48_net_time
+        packet = read(:length => 624, :wait => true)
+        Packet::Bin48NetTime.read(StringIO.new(packet))
+      when :bin48_net
+        packet = read(:length => 618, :wait => true)
+        Packet::Bin48Net.read(StringIO.new(packet))
+      when :bin48_abs
+        packet = read(:length => 378, :wait => true)
+        Packet::Bin48Abs.read(StringIO.new(packet))
+      when :bin32_net
+        packet = read(:length => 428, :wait => true)
+        Packet::Bin32Net.read(StringIO.new(packet))
+      when :bin32_abs
+        packet = read(:length => 268, :wait => true)
+        Packet::Bin32Abs.read(StringIO.new(packet))
       end
     end
+    # rubocop:enable Metrics/AbcSize,Metrics/CyclomaticComplexity,Metrics/MethodLength
 
     private
 
@@ -222,20 +241,27 @@ module GreenEyeMonitor
     end
 
     def read(options = {})
-      if options[:wait]
-        data = @serial.getbyte while data.nil?
-        @serial.ungetbyte(data)
-      end
+      wait if options[:wait]
 
       # TODO: Make :expect an arg if w never need anything else
-      raise("Only support expect #{options}") unless options[:expect]
-
-      data = read_expect(options[:expect])
+      if options[:expect]
+        data = read_expect(options[:expect])
+      elsif options[:length]
+        data = @serial.read(options[:length])
+        raise(Errors::TooShort, "Data too short #{data.inspect}") if data.size != options[:length]
+      else
+        raise('Unsupported options')
+      end
 
       puts "<--- #{data.inspect}" if @debug
       data.strip!
 
       data
+    end
+
+    def wait
+      byte = @serial.getbyte while byte.nil?
+      @serial.ungetbyte(byte)
     end
   end
 end

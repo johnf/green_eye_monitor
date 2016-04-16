@@ -1,0 +1,5 @@
+require 'green_eye_monitor/packet/bin32_abs'
+require 'green_eye_monitor/packet/bin32_net'
+require 'green_eye_monitor/packet/bin48_abs'
+require 'green_eye_monitor/packet/bin48_net'
+require 'green_eye_monitor/packet/bin48_net_time'

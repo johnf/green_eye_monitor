@@ -3,20 +3,46 @@
 $LOAD_PATH.unshift(File.dirname(__FILE__) + '/lib')
 
 require 'green_eye_monitor/client'
+
+require 'slop'
 require 'awesome_print'
 
-client = GreenEyeMonitor::Client.new(:baud => 115_200, :debug => false)
+opts = Slop.parse do |o|
+  o.bool '-d', '--debug', 'enable debug mode'
+  o.on '--version', 'print the version' do
+    puts Slop::VERSION
+    exit
+  end
+end
 
-# client.shell
-# client.packet_send_interval = 3
-# client.packet_chunk_size = 65_000
-# client.com1_baud_rate = 115_200
-puts "Hertz: #{client.hertz}"
-puts "Temp: #{client.temperature(1)}"
-puts "Recent: #{client.recent_values}"
+client = GreenEyeMonitor::Client.new(:baud => 115_200, :debug => opts[:debug])
+
+# puts "Hertz: #{client.hertz}"
+# puts "Temp: #{client.temperature(1)}"
+# puts "Recent: #{client.recent_values}"
 
 puts 'List Format:'
 client.packet_format = :list
 puts client.send_one_packet
+
+puts
+puts
+
+puts 'Bin32 Net Format:'
+client.packet_format = :bin32_net
+data = client.send_one_packet
+
+ap data.snapshot
+puts "Serial: #{data.serial}"
+puts "Device ID: #{data.device_id}"
+puts "Voltage: #{data.voltage}"
+puts
+puts "ABS Watt Seconds #{data.abs_watt_seconds[0, 5]}"
+puts "Polarised Watt Seconds #{data.polarised_watt_seconds[0, 5]}"
+puts "Current: #{data.current[0, 5]}"
+
+puts "Seconds: #{data.seconds}"
+puts "Pulse: #{data.pulse}"
+puts "Temperature: #{data.temperature}"
 
 # client.shell
