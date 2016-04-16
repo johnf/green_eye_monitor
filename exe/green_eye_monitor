@@ -17,24 +17,31 @@ end
 
 client = GreenEyeMonitor::Client.new(:baud => 115_200, :debug => opts[:debug])
 
-# puts "Hertz: #{client.hertz}"
-# puts "Temp: #{client.temperature(1)}"
-# puts "Recent: #{client.recent_values}"
+# client.packet_format = :bin48_net_time
+# client.enable_realtime
 
-puts 'List Format:'
+# exit
+
+puts '# Direct'
+puts "Serial: #{client.serial}"
+puts "Hertz: #{client.hertz}"
+puts "Temp: #{client.temperature(1)}"
+# puts "Recent: #{client.recent_values}"
+puts
+
+puts '# List Format'
 client.packet_format = :list
 puts client.send_one_packet
 
 puts
 puts
 
-puts 'Bin32 Net Format:'
+puts '# Bin32 Net Format'
 client.packet_format = :bin32_net
 data = client.send_one_packet
 
-ap data.snapshot
-puts "Serial: #{data.serial}"
-puts "Device ID: #{data.device_id}"
+# ap data.snapshot
+puts "Serial: #{data.serial_number}"
 puts "Voltage: #{data.voltage}"
 puts
 puts "ABS Watt Seconds #{data.abs_watt_seconds[0, 5]}"

@@ -168,6 +168,11 @@ module GreenEyeMonitor
       read(:expect => /^[56]0Hz\r\n\r\n$/)
     end
 
+    def serial
+      write('RQSSRN')
+      read(:expect => /^\d+\r\n$/)
+    end
+
     def temperature(channel)
       raise(Errors::Argument, 'Invalid temperature channel') unless channel >= 1 && channel <= 8
 
@@ -198,19 +203,19 @@ module GreenEyeMonitor
       when :list
         read(:expect => /^.*<EOP>$/, :wait => true)
       when :bin48_net_time
-        packet = read(:length => 624, :wait => true)
+        packet = read(:length => 625, :wait => true)
         Packet::Bin48NetTime.read(StringIO.new(packet))
       when :bin48_net
-        packet = read(:length => 618, :wait => true)
+        packet = read(:length => 619, :wait => true)
         Packet::Bin48Net.read(StringIO.new(packet))
       when :bin48_abs
-        packet = read(:length => 378, :wait => true)
+        packet = read(:length => 379, :wait => true)
         Packet::Bin48Abs.read(StringIO.new(packet))
       when :bin32_net
-        packet = read(:length => 428, :wait => true)
+        packet = read(:length => 429, :wait => true)
         Packet::Bin32Net.read(StringIO.new(packet))
       when :bin32_abs
-        packet = read(:length => 268, :wait => true)
+        packet = read(:length => 269, :wait => true)
         Packet::Bin32Abs.read(StringIO.new(packet))
       end
     end

@@ -13,6 +13,7 @@ module GreenEyeMonitor
       array :polarised_watt_seconds, :type => :uint40le, :initial_length => :num_channels, :onlyif => :polarised
 
       uint16be :serial
+      skip :length => 1
       uint8 :device_id
 
       array :raw_current, :type => :uint16le, :initial_length => :num_channels
@@ -38,10 +39,10 @@ module GreenEyeMonitor
       uint8 :checksum, :assert => lambda { calc_checksum(value) }
 
       def calc_checksum(checksum)
-        # TODO: Why do we need to add 18???
-        calculated_checksum = (to_binary_s.bytes.inject(0, :+) - checksum + 18) & 0xFF
+        calculated_checksum = (to_binary_s.bytes.inject(0, :+) - checksum) & 0xFF
 
-        checksum == calculated_checksum
+        # TODO why are we off by one?
+        checksum == calculated_checksum + 1
       end
 
       def voltage
@@ -54,6 +55,10 @@ module GreenEyeMonitor
 
       def temperature
         raw_temperature.map { |v| v / 2.0 }
+      end
+
+      def serial_number
+        format('%03d%05d', device_id, serial)
       end
     end
   end
