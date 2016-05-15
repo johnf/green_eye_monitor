@@ -3,6 +3,15 @@ require 'bindata'
 module GreenEyeMonitor
   module Packet
     class BinNetBase < BinData::Record
+      attr_accessor :old_record
+
+      def self.read(data, old_record = nil)
+        packet = super(data)
+        packet.old_record = old_record
+
+        packet
+      end
+
       uint8 :header_a, :asserted_value => 0xFE
       uint8 :header_b, :asserted_value => 0xFF
       uint8 :header_c, :asserted_value => :version
@@ -38,13 +47,6 @@ module GreenEyeMonitor
 
       uint8 :checksum, :assert => lambda { calc_checksum(value) }
 
-      def calc_checksum(checksum)
-        calculated_checksum = (to_binary_s.bytes.inject(0, :+) - checksum) & 0xFF
-
-        # TODO: why are we off by one?
-        checksum == calculated_checksum + 1
-      end
-
       def voltage
         raw_voltage / 10.0
       end
@@ -59,6 +61,57 @@ module GreenEyeMonitor
 
       def serial_number
         format('%03d%05d', device_id, serial)
+      end
+
+      def va
+        current.map { |c| (c * voltage).to_i }
+      end
+
+      def abs_watts
+        if old_record
+          derive_watts(old_record.abs_watt_seconds, abs_watt_seconds, old_record.seconds, seconds)
+        else
+          [0] * abs_watt_seconds.size
+        end
+      end
+
+      def polarised_watts
+        if old_record
+          derive_watts(old_record.polarised_watt_seconds, polarised_watt_seconds, old_record.seconds, seconds)
+        else
+          [0] * abs_watt_seconds.size
+        end
+      end
+
+      private
+
+      def calc_checksum(checksum)
+        calculated_checksum = (to_binary_s.bytes.inject(0, :+) - checksum) & 0xFF
+
+        # TODO: why are we off by one?
+        checksum == calculated_checksum + 1
+      end
+
+      def derive_watts(prev_ws_values, curr_ws_values, prev_sec, cur_sec)
+        if prev_sec > cur_sec
+          sec_diff = 256^3 - prev_sec
+          sec_diff += cur_sec
+        else
+          sec_diff = cur_sec - prev_sec
+        end
+
+        prev_ws_values.zip(curr_ws_values).map do |prev_ws, curr_ws|
+          if prev_ws > curr_ws
+            ws_diff = 256^5 - prev_ws
+            ws_diff += curr_ws
+          else
+            ws_diff = curr_ws - prev_ws
+          end
+
+          watts = ws_diff / sec_diff
+
+          watts
+        end
       end
     end
   end

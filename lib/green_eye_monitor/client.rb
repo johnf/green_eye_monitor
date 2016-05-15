@@ -193,7 +193,7 @@ module GreenEyeMonitor
     end
 
     # rubocop:disable Metrics/AbcSize,Metrics/CyclomaticComplexity,Metrics/MethodLength
-    def send_one_packet
+    def send_one_packet(old_packet = nil)
       pf = packet_format
       raise(Errors::NotImplemented, "Unimplemented packet format: #{pf}") unless IMPLEMENTED_FORMATS.include?(pf)
 
@@ -204,19 +204,19 @@ module GreenEyeMonitor
         read(:expect => /^.*<EOP>$/, :wait => true)
       when :bin48_net_time
         packet = read(:length => 625, :wait => true)
-        Packet::Bin48NetTime.read(StringIO.new(packet))
+        Packet::Bin48NetTime.read(StringIO.new(packet), old_packet)
       when :bin48_net
         packet = read(:length => 619, :wait => true)
-        Packet::Bin48Net.read(StringIO.new(packet))
+        Packet::Bin48Net.read(StringIO.new(packet), old_packet)
       when :bin48_abs
         packet = read(:length => 379, :wait => true)
-        Packet::Bin48Abs.read(StringIO.new(packet))
+        Packet::Bin48Abs.read(StringIO.new(packet), old_packet)
       when :bin32_net
         packet = read(:length => 429, :wait => true)
-        Packet::Bin32Net.read(StringIO.new(packet))
+        Packet::Bin32Net.read(StringIO.new(packet), old_packet)
       when :bin32_abs
         packet = read(:length => 269, :wait => true)
-        Packet::Bin32Abs.read(StringIO.new(packet))
+        Packet::Bin32Abs.read(StringIO.new(packet), old_packet)
       end
     end
     # rubocop:enable Metrics/AbcSize,Metrics/CyclomaticComplexity,Metrics/MethodLength
