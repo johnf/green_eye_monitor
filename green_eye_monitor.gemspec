@@ -22,6 +22,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'bindata'
   spec.add_dependency 'slop'
   spec.add_dependency 'awesome_print'
+  spec.add_dependency 'terminal-table'
 
   spec.add_development_dependency 'bundler'
   spec.add_development_dependency 'rake'
