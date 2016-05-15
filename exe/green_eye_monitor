@@ -9,13 +9,14 @@ require 'awesome_print'
 
 opts = Slop.parse do |o|
   o.bool '-d', '--debug', 'enable debug mode'
+  o.string '--port', 'serial port', default: '/dev/ttyUSB1'
   o.on '--version', 'print the version' do
     puts Slop::VERSION
     exit
   end
 end
 
-client = GreenEyeMonitor::Client.new(:baud => 115_200, :debug => opts[:debug])
+client = GreenEyeMonitor::Client.new(:baud => 115_200, :serial_port => opts[:port], :debug => opts[:debug])
 
 # client.packet_format = :bin48_net_time
 # client.enable_realtime
