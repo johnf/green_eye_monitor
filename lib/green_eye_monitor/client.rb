@@ -64,7 +64,7 @@ module GreenEyeMonitor
         command.strip!
         command = old_command if command.empty?
         write(command)
-        puts read
+        puts read(:length => 100)
         old_command = command
       end
     end
@@ -254,6 +254,8 @@ module GreenEyeMonitor
       elsif options[:length]
         data = @serial.read(options[:length])
         raise(Errors::TooShort, "Data too short #{data.inspect}") if data.size != options[:length]
+      elsif options[:all]
+        data = @serial.read(1_000)
       else
         raise('Unsupported options')
       end
