@@ -1,8 +1,9 @@
 # Changelog
 
-# master (20160515)
+# 0.0.3 (20160515)
 
 * Add functionality to derive watts based on previous packet (@johnf)
+* Add table output to sample script
 
 # 0.0.2 (20160515)
 
