@@ -266,7 +266,17 @@ module GreenEyeMonitor
     end
 
     def wait
-      byte = @serial.getbyte while byte.nil?
+      iterations = 5 * 1_000 / @serial.read_timeout
+
+      i = 0
+      loop do
+        byte = @serial.getbyte
+        break if byte.nil?
+
+        i += 1
+        raise(Errors::Timeout, 'Waited too long for data') if i > iterations
+      end
+
       @serial.ungetbyte(byte)
     end
   end
