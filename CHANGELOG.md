@@ -1,5 +1,9 @@
 # Changelog
 
+# 0.0.5 (20160518)
+
+* Fix serial waiting logic (@johnf)
+
 # 0.0.4 (20160518)
 
 * Don't wait on serial port forever (@johnf)
