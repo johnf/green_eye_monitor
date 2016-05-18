@@ -192,7 +192,7 @@ module GreenEyeMonitor
       read(:expect => /VAL.*END\r\n$/)
     end
 
-    # rubocop:disable Metrics/AbcSize,Metrics/CyclomaticComplexity,Metrics/MethodLength
+    # rubocop:disable Metrics/CyclomaticComplexity,Metrics/MethodLength
     def send_one_packet(old_packet = nil)
       pf = packet_format
       raise(Errors::NotImplemented, "Unimplemented packet format: #{pf}") unless IMPLEMENTED_FORMATS.include?(pf)
@@ -219,7 +219,7 @@ module GreenEyeMonitor
         Packet::Bin32Abs.read(StringIO.new(packet), old_packet)
       end
     end
-    # rubocop:enable Metrics/AbcSize,Metrics/CyclomaticComplexity,Metrics/MethodLength
+    # rubocop:enable Metrics/CyclomaticComplexity,Metrics/MethodLength
 
     private
 
@@ -248,7 +248,6 @@ module GreenEyeMonitor
     def read(options = {})
       wait if options[:wait]
 
-      # TODO: Make :expect an arg if w never need anything else
       if options[:expect]
         data = read_expect(options[:expect])
       elsif options[:length]

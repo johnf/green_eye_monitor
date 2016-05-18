@@ -93,20 +93,18 @@ module GreenEyeMonitor
       end
 
       def derive_watts(prev_ws_values, curr_ws_values, prev_sec, cur_sec)
-        if prev_sec > cur_sec
-          sec_diff = 256^3 - prev_sec
-          sec_diff += cur_sec
-        else
-          sec_diff = cur_sec - prev_sec
-        end
+        sec_diff = if prev_sec > cur_sec
+                     256 ^ 3 - prev_sec + cur_sec
+                   else
+                     cur_sec - prev_sec
+                   end
 
         prev_ws_values.zip(curr_ws_values).map do |prev_ws, curr_ws|
-          if prev_ws > curr_ws
-            ws_diff = 256^5 - prev_ws
-            ws_diff += curr_ws
-          else
-            ws_diff = curr_ws - prev_ws
-          end
+          ws_diff = if prev_ws > curr_ws
+                      256 ^ 5 - prev_ws + curr_ws
+                    else
+                      curr_ws - prev_ws
+                    end
 
           watts = ws_diff / sec_diff
 

@@ -10,7 +10,7 @@ require 'terminal-table'
 
 opts = Slop.parse do |o|
   o.bool '-d', '--debug', 'enable debug mode'
-  o.string '--port', 'serial port', default: '/dev/ttyUSB1'
+  o.string '--port', 'serial port', :default => '/dev/ttyUSB1'
   o.on '--version', 'print the version' do
     puts Slop::VERSION
     exit
@@ -54,13 +54,13 @@ rows << ['ABS Watts'] + data.abs_watts
 rows << ['VA'] + data.va
 rows << ['Polarised Watts'] + data.polarised_watts
 rows << ['Current'] + data.current
-rows.each {|row| row.slice!(15..28)}
+rows.each { |row| row.slice!(15..28) }
 headings = [''] + (1..15).to_a + (30..32).to_a
 puts Terminal::Table.new(:rows => rows, :headings => headings)
 puts
 
 puts "ABS Total: #{data.abs_watts.to_a[0..14].inject(:+)} vs #{data.abs_watts.to_a[28..31].inject(:+)}"
-puts "Polarised Total: #{data.polarised_watts.to_a[0..24].inject(:+)} vs #{data.polarised_watts.to_a[28..31].inject(:+)}"
+puts "Polar Total: #{data.polarised_watts.to_a[0..24].inject(:+)} vs #{data.polarised_watts.to_a[28..31].inject(:+)}"
 puts "VA Total: #{data.va.to_a[0..14].inject(:+)} vs #{data.va.to_a[28..31].inject(:+)}"
 puts "Current Total: #{data.current.to_a[0..14].inject(:+)} vs #{data.current.to_a[28..31].inject(:+)}"
 
