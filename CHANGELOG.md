@@ -1,5 +1,9 @@
 # Changelog
 
+# 0.0.4 (20160518)
+
+* Don't wait on serial port forever (@johnf)
+
 # 0.0.3 (20160515)
 
 * Add functionality to derive watts based on previous packet (@johnf)
