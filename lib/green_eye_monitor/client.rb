@@ -41,14 +41,14 @@ module GreenEyeMonitor
 
       @serial = SerialPort.new(serial_port, 'baud' => baud)
 
-      @serial.read_timeout = 100
+      @serial.read_timeout = 400
 
       # We disable all the push so we can operate in pull mode
       write('SYSOFF')
       write('SYSKAI0')
 
       # Wait for any last writes
-      sleep(0.1)
+      sleep(0.5)
 
       # Flush everything
       @serial.flush_output
@@ -64,7 +64,7 @@ module GreenEyeMonitor
         command.strip!
         command = old_command if command.empty?
         write(command)
-        puts read(:length => 100)
+        puts read(:all => true)
         old_command = command
       end
     end
@@ -113,54 +113,99 @@ module GreenEyeMonitor
       int_format = PACKET_FORMATS[packet_format] || raise(Errors::Argument, 'Unknown packet format')
 
       write(format('SYSPKF%02d', int_format))
-      read(:expect => 'PKT')
+      read(:expect => /^PKF\r\n$/)
     end
 
     def disable_secondary_packet_format
       write('SYSPKF00')
-      read(:expect => 'PKT')
+      read(:expect => /^PKF\r\n$/)
     end
 
     def packet_send_interval=(seconds)
       raise(Errors::Argument, 'Invalid interval: must be between 1 and 256') unless seconds > 0 && seconds <= 256
 
       write(format('SYSIVL%03d', seconds))
-      read(:expect => 'IVL')
+      read(:expect => /^IVL\r\n$/)
     end
 
     def packet_chunk_size=(size)
       raise(Errors::Argument, 'Invalid chunk size: must be between 80 and 65,000') unless size >= 80 && size <= 65_000
 
-      write("SYSPKS#{size}\n")
-      read(:expect => 'PKS')
+      write("SYSPKS#{size}\r")
+      read(:expect => /^PKS\r\n$/)
     end
 
     def packet_chunk_interval=(secs)
       raise(Errors::Argument, 'Invalid interval: must be between 16 and 65,000') unless secs >= 16 && secs <= 65_000
 
-      write("SYSPKI#{seconds}\n")
-      read(:expect => 'PKI')
+      write("SYSPKI#{secs}\r")
+      read(:expect => /^PKI\r\n$/)
     end
 
     def max_buffer_size=(size)
       raise(Errors::Argument, 'Invalid buffer size: must be between 10 and 1,700') unless size >= 10 && size <= 1_700
 
-      write("SYSBFF#{size}\n")
-      read(:expect => 'BFF')
+      write("SYSBFF#{size}\r")
+      read(:expect => /^BFF\r\n$/)
     end
 
     def com1_baud_rate=(rate)
       int_rate = BAUD_RATES[rate] || raise(Errors::Argument, 'Unknown baud rate')
 
       write("SYSBD1#{int_rate}")
-      read(:expect => 'OK')
+      read(:expect => /^OK\r\n$/)
     end
 
     def com2_baud_rate=(rate)
       raise(Errors::Argument, 'COM2 can only operate at 19,200') if rate != 19_200
 
       write('SYSBD20')
-      read(:expect => 'OK')
+      read(:expect => /^OK\r\n$/)
+    end
+
+    def pt_type=(ratio)
+      raise(Errors::Argument, 'Invalid ratio: must be between 1 and 255') unless ratio >= 1 && ratio <= 255
+
+      write(format('SYSTPT%03d', ratio))
+      read(:expect => /^TPT\r\n$/)
+    end
+
+    def pt_range=(value)
+      raise(Errors::Argument, 'Invalid range: must be between 1 and 4') unless value >= 1 && value <= 4
+
+      write(format('SYSVRG%02d', value))
+      read(:expect => /^VRG\r\n$/)
+    end
+
+    def hertz=(value)
+      raise(Errors::Argument, 'Invalid range: must be 0 or 1') unless value == 1 || value == 1
+
+      write("SYSHZ#{value}")
+      read(:expect => /^HZ#{value}\r\n$/)
+    end
+
+    def channel_phase(channel, phase)
+      raise(Errors::Argument, 'Invalid channel: must be between 1 and 48') unless channel >= 1 && channel <= 48
+      raise(Errors::Argument, 'Invalid phase: must be A, B or C') unless %w[A B C].include?(phase)
+
+      write(format('C%02dPH%s', channel, phase))
+      read(:expect => /^OK\r\n$/)
+    end
+
+    def channel_type(channel, type)
+      raise(Errors::Argument, 'Invalid channel: must be between 1 and 48') unless channel >= 1 && channel <= 48
+      raise(Errors::Argument, 'Invalid type: must be between 1 and 255') unless type >= 1 && type <= 255
+
+      write(format('C%02dTYP%03d', channel, type))
+      read(:expect => /^OK\r\n$/)
+    end
+
+    def channel_range(channel, range)
+      raise(Errors::Argument, 'Invalid channel: must be between 1 and 48') unless channel >= 1 && channel <= 48
+      raise(Errors::Argument, 'Invalid range: must be between 0 and 9') unless range >= 0 && range <= 9
+
+      write(format('C%02dRNG%01d', channel, range))
+      read(:expect => /^OK\r\n$/)
     end
 
     def hertz
@@ -184,7 +229,6 @@ module GreenEyeMonitor
       raise(Errors::Argument, 'Invalid temperature channel') unless channel >= 1 && channel <= 8
 
       write("TMPEN#{channel}")
-      read('MOO')
     end
 
     def recent_values
@@ -225,6 +269,8 @@ module GreenEyeMonitor
 
     def write(cmd)
       puts "---> #{cmd}" if @debug
+      cmd.sub!(/\\n$/, "\n")
+      cmd.sub!(/\\r$/, "\r")
       @serial.syswrite("^^^#{cmd}")
     end
 
@@ -252,7 +298,7 @@ module GreenEyeMonitor
         data = read_expect(options[:expect])
       elsif options[:length]
         data = @serial.read(options[:length])
-        raise(Errors::TooShort, "Data too short #{data.inspect}") if data.size != options[:length]
+        raise(Errors::TooShort, "Data too short (#{data.size} != #{options[:length]}) #{data.inspect}") if data.size != options[:length]
       elsif options[:all]
         data = @serial.read(1_000)
       else

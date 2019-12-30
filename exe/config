@@ -1,0 +1,72 @@
+#!/usr/bin/env ruby
+
+$LOAD_PATH.unshift(File.dirname(__FILE__) + '/lib')
+
+require 'green_eye_monitor/client'
+
+require 'slop'
+require 'awesome_print'
+require 'terminal-table'
+
+opts = Slop.parse do |o|
+  o.bool '-d', '--debug', 'enable debug mode'
+  o.string '--port', 'serial port', default: '/dev/ttyUSB1'
+  o.on '--version', 'print the version' do
+    puts Slop::VERSION
+    exit
+  end
+end
+
+client = GreenEyeMonitor::Client.new(:baud => 115_200, :serial_port => opts[:port], :debug => opts[:debug])
+
+puts '# Check Comms'
+puts "Serial: #{client.serial}"
+puts "Hertz: #{client.hertz}"
+puts "Temp: #{client.temperature(1)}"
+
+
+
+puts '# Setting everything up'
+client.packet_format = :bin48_net_time
+client.disable_secondary_packet_format
+client.disable_keepalive
+client.packet_send_interval = 10
+
+client.packet_chunk_size = 2047
+client.packet_chunk_interval = 800
+client.max_buffer_size = 1700
+
+client.pt_type = 196
+client.pt_range = 3
+client.hertz = 1 # 50Hz
+
+# TODO set polarit 
+configs = {
+  1  => { :type => 210, :phase => 'C', :range => 4 },
+  2  => { :type => 210, :phase => 'A', :range => 4 },
+  3  => { :type => 210, :phase => 'A', :range => 4 },
+  4  => { :type => 210, :phase => 'C', :range => 4 },
+  5  => { :type => 210, :phase => 'B', :range => 4 },
+  6  => { :type => 210, :phase => 'A', :range => 4 },
+  7  => { :type => 210, :phase => 'C', :range => 4 },
+  8  => { :type => 210, :phase => 'B', :range => 4 },
+  9  => { :type => 210, :phase => 'A', :range => 4 },
+  10 => { :type => 210, :phase => 'C', :range => 4 },
+  11 => { :type => 210, :phase => 'A', :range => 4 },
+  12 => { :type => 210, :phase => 'C', :range => 4 },
+  13 => { :type => 210, :phase => 'B', :range => 4 },
+  14 => { :type => 210, :phase => 'A', :range => 4 },
+  30 => { :type => 212, :phase => 'A', :range => 3 },
+  31 => { :type => 212, :phase => 'C', :range => 3 },
+  32 => { :type => 212, :phase => 'B', :range => 3 },
+}
+configs.each_pair do |channel, config|
+  client.channel_phase(channel, config[:phase])
+  client.channel_type(channel, config[:type])
+  client.channel_range(channel, config[:range])
+end
+
+puts 'Enable Real Time Packets'
+client.enable_realtime
+
+client.shell

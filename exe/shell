@@ -1,0 +1,23 @@
+#!/usr/bin/env ruby
+
+$LOAD_PATH.unshift(File.dirname(__FILE__) + '/lib')
+
+require 'green_eye_monitor/client'
+
+require 'slop'
+require 'awesome_print'
+require 'terminal-table'
+
+opts = Slop.parse do |o|
+  o.bool '-d', '--debug', 'enable debug mode'
+  o.string '--port', 'serial port', default: '/dev/ttyUSB1'
+  o.on '--version', 'print the version' do
+    puts Slop::VERSION
+    exit
+  end
+end
+
+client = GreenEyeMonitor::Client.new(:baud => 115_200, :serial_port => opts[:port], :debug => opts[:debug])
+
+client.shell
+
